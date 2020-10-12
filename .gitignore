@@ -3,3 +3,4 @@
 *.hdf
 *.nc
 **/dask-worker-space
+**/.vscode/
