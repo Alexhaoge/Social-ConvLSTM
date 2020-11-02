@@ -1,7 +1,12 @@
-name: pytorch
+name: stconvs2s
 channels:
-  - pytorch
-  - anaconda
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/msys2/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/bioconda/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge
   - defaults
 dependencies:
   - asn1crypto=0.24.0=py36_0
@@ -72,7 +77,6 @@ dependencies:
   - numpy=1.16.2=py36h7e9f1db_0
   - numpy-base=1.16.2=py36hde5b4d6_0
   - olefile=0.46=py36_0
-  - openssl=1.1.1=h7b6447c_0
   - owslib=0.17.1=py_0
   - packaging=19.0=py36_0
   - pandas=0.24.2=py36he6710b0_0
