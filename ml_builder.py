@@ -53,7 +53,7 @@ class MLBuilder:
         dataset_name, dataset_file, dropout_rate = self.__get_dataset_file()
         ds = xr.open_mfdataset(dataset_file)
         if (self.small_dataset):
-            ds = ds[dict(sample=slice(0,500))]
+            ds = ds[dict(sample=slice(0,1000))]
 
         train_dataset = NetCDFDataset(ds, test_split=test_split, 
                                       validation_split=validation_split)
