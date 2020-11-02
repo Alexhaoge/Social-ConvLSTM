@@ -33,17 +33,17 @@ class Util:
             val = columns_name[1]
             # find position of lowest validation loss
             idx_min_loss = df[val].idxmin()
-            plot.axvline(idx_min_loss, linestyle='--', color='r',label='Best epoch');
-            plot.legend();
-            plot.set_xlim(0, len(df.index)+1);
+            plot.axvline(idx_min_loss, linestyle='--', color='r',label='Best epoch')
+            plot.legend()
+            plot.set_xlim(0, len(df.index)+1)
             plot.xaxis.set_major_locator(MaxNLocator(integer=True))
-            plot.set_xlabel(x_label, fontsize=12);
-            plot.set_ylabel(y_label, fontsize=12);
-            plot.set_title(title, fontsize=16);
+            plot.set_xlabel(x_label, fontsize=12)
+            plot.set_ylabel(y_label, fontsize=12)
+            plot.set_title(title, fontsize=16)
             if (not inline):
                 plot_dir = self.__create_dir('plots')
                 filename = os.path.join(plot_dir, self.base_filename + '.png')
-                plot.figure.savefig(filename, bbox_inches='tight');
+                plot.figure.savefig(filename, bbox_inches='tight')
         
     def send_email(self, model_info, enable=True):
         if (enable):
