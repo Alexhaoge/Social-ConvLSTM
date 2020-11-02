@@ -65,8 +65,12 @@ def run(builder, iteration, util):
 
 if __name__ == '__main__':    
     args = get_arguments()
-    os.environ["CUDA_VISIBLE_DEVICES"]=str(args.cuda)
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    # os.environ["CUDA_VISIBLE_DEVICES"]=str(args.cuda)
+    print(args)
+    if (torch.cuda.is_available()):
+        device = torch.device('cuda:'+str(args.cuda))
+    else:
+        device = torch.device('cpu')
     message, model_descr = None, None
     if (args.convlstm): 
         model_descr = 'ConvLSTM'
