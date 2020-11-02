@@ -1,4 +1,4 @@
-name: pytorch
+name: stconvs2s
 channels: 
  - pytorch
  - anaconda 

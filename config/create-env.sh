@@ -15,7 +15,7 @@ source ~/anaconda3/etc/profile.d/conda.sh
 
 # Creating environment
 conda env create -f environment-freeze.yml
-conda activate pytorch
+conda activate stconvs2s
 
 # Instaling environment as kernel
-ipython kernel install --user --name pytorch
+ipython kernel install --user --name stconvs2s
