@@ -16,7 +16,7 @@ class EncoderSTCNN(nn.Module):
         
         out_channels = initial_filter_size
         in_channels = channels
-        for i in range(layer_size):
+        for _ in range(layer_size):
             self.conv_layers.append(
                 nn.Conv3d(in_channels=in_channels, out_channels=out_channels, 
                           kernel_size=spatial_kernel_size, padding=spatial_padding, bias=False)

@@ -1,0 +1,63 @@
+Namespace(chirps=False, convlstm=True, cuda='0', email=False, epoch=100, iteration=10, mae=False, no_seed=False, no_stop=False, patience=16, plot=True, small_dataset=False, step=5, verbose=False, version='4', workers=4)
+RUN MODEL: ConvLSTM
+Device: cuda:0
+=> Loaded checkpoint cfsr_rmseloss_4_20201112-093514.pth.tar (best epoch: 62, validation error: 1.8583)
+timestamp: 6351.192662715912
+Training time: 1:45:51.19
+ConvLSTM RMSELoss: 1.8519
+
+=> Loaded checkpoint cfsr_rmseloss_4_20201112-112208.pth.tar (best epoch: 55, validation error: 1.8293)
+timestamp: 5742.328365564346
+Training time: 1:35:42.33
+ConvLSTM RMSELoss: 1.8186
+
+=> Loaded checkpoint cfsr_rmseloss_4_20201112-125946.pth.tar (best epoch: 34, validation error: 1.8555)
+timestamp: 4048.1154494285583
+Training time: 1:07:28.12
+ConvLSTM RMSELoss: 1.8393
+
+=> Loaded checkpoint cfsr_rmseloss_4_20201112-140839.pth.tar (best epoch: 46, validation error: 1.8456)
+timestamp: 5116.735016345978
+Training time: 1:25:16.74
+ConvLSTM RMSELoss: 1.8333
+
+=> Loaded checkpoint cfsr_rmseloss_4_20201112-153601.pth.tar (best epoch: 65, validation error: 1.8431)
+timestamp: 6652.1517062187195
+Training time: 1:50:52.15
+ConvLSTM RMSELoss: 1.8328
+
+=> Loaded checkpoint cfsr_rmseloss_4_20201112-172719.pth.tar (best epoch: 38, validation error: 1.8547)
+timestamp: 4330.632428884506
+Training time: 1:12:10.63
+ConvLSTM RMSELoss: 1.8463
+
+=> Loaded checkpoint cfsr_rmseloss_4_20201112-183941.pth.tar (best epoch: 35, validation error: 1.8578)
+timestamp: 4098.558401584625
+Training time: 1:08:18.56
+ConvLSTM RMSELoss: 1.8562
+
+=> Loaded checkpoint cfsr_rmseloss_4_20201112-194812.pth.tar (best epoch: 47, validation error: 1.8541)
+timestamp: 5069.778818845749
+Training time: 1:24:29.78
+ConvLSTM RMSELoss: 1.8529
+
+=> Loaded checkpoint cfsr_rmseloss_4_20201112-211252.pth.tar (best epoch: 25, validation error: 1.8819)
+timestamp: 3296.959851503372
+Training time: 0:54:56.96
+ConvLSTM RMSELoss: 1.8759
+
+=> Loaded checkpoint cfsr_rmseloss_4_20201112-220815.pth.tar (best epoch: 14, validation error: 1.9285)
+timestamp: 2416.7286603450775
+Training time: 0:40:16.73
+ConvLSTM RMSELoss: 1.9054
+
+timestamp: 4712.318136143685
+
+Errors:  [1.8519180842808314, 1.8186319659931869, 1.8393488880676059, 1.8332835534750591, 1.8327795948301042, 1.8462769001859674, 1.8562342433885495, 1.8528855193045832, 1.875900900308987, 1.905415165808893]
+
+Times:  [6351.192662715912, 5742.328365564346, 4048.1154494285583, 5116.735016345978, 6652.1517062187195, 4330.632428884506, 4098.558401584625, 5069.778818845749, 3296.959851503372, 2416.7286603450775]
+-----------------------
+Mean and standard deviation after 10 iterations
+=> Test Error: mean: 1.8513, std: 0.023375
+=> Training time: mean_readable: 1:18:32.32, mean: 4712.3181, std: 1266.397905
+-----------------------

@@ -25,7 +25,8 @@ def get_arguments():
     parser.add_argument('--no-seed', action='store_true', dest='no_seed')
     parser.add_argument('--no-stop', action='store_true', dest='no_stop')
     parser.add_argument('--small-dataset', action='store_true', dest='small_dataset')
-    parser.add_argument('--convlstm', action='store_true')   
+    parser.add_argument('--convlstm', action='store_true')
+    parser.add_argument('--vlstm', action='store_true')
     parser.add_argument('--mae', action='store_true')
     parser.add_argument('--chirps', action='store_true')
     
@@ -74,13 +75,15 @@ if __name__ == '__main__':
     message, model_descr = None, None
     if (args.convlstm): 
         model_descr = 'ConvLSTM'
+    elif args.vlstm:
+        model_descr = 'vanillaLSTM'
     else:
         model_descr = 'STConvS2s'
     
     model_builder = MLBuilder(model_descr, args.version, args.plot, 
                                args.no_seed, args.verbose, args.small_dataset, 
                                args.no_stop, args.epoch, args.patience, device, 
-                               args.workers, args.convlstm, args.mae, 
+                               args.workers, args.convlstm, args.vlstm, args.mae, 
                                args.chirps, args.step)
                                
     print(f'RUN MODEL: {model_descr}')

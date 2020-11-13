@@ -37,6 +37,9 @@ class Trainer:
         return train_losses, val_losses
 
     def __train(self):
+        """
+        inputs/target shape (batch, 1, seq_len, H, W)
+        """
         self.model.train()
         epoch_loss = 0.0
         for batch_idx, (inputs, target) in enumerate(self.train_loader):
