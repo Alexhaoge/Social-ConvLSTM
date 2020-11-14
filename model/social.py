@@ -2,38 +2,48 @@ import torch.nn as nn
 import torch
 
 from torch.autograd import Variable
+from .downsample import DownSampleForLSTM
 
-class SocialModel(nn.Module):
+class SocialLSTM(nn.Module):
+    """Vanilla LSTMs
 
-    def __init__(self, args, infer=False):
-        '''
-        Initializer function
-        params:
-        args: Training arguments
-        infer: Training or test time (true if test time)
-        '''
-        super(SocialModel, self).__init__()
+    Simple vanilla LSTMs for baseline. After downsample, 
+    Each LSTM is responsible for a block and runs independently.
 
-        self.args = args
-        self.infer = infer
-        self.use_cuda = args.use_cuda
+    Args:
 
-        if infer:
-            # Test time
-            self.seq_length = 1
-        else:
-            # Training time
-            self.seq_length = args.seq_length
+    Inputs:
+        _input: input tensor should be in shape of
+        (batch, channel, seq_len,  input_size, input_size).
+        NOTE: currently all version will only take channel 0 only!
+            
+    Returns:
+        output of LSTMs
+        (seq_len, batch, lstm_num_square, lstm_num_square)
+    """
 
-        # Store required sizes
-        self.rnn_size = args.rnn_size
-        self.grid_size = args.grid_size
-        self.embedding_size = args.embedding_size
-        self.input_size = args.input_size
-        self.output_size = args.output_size
-        self.maxNumPeds=args.maxNumPeds
-        self.seq_length=args.seq_length
-        self.gru = args.gru
+    def __init__(self, input_size:int,
+                lstm_num_square:int=3,
+                layer_num:int=1,
+                dropout_rate:float=0.,
+                upsample:bool=False):
+        super(SocialLSTM, self).__init__()
+        self.input_size = input_size
+        self.lstm_num_square = lstm_num_square
+        # Downsample layer before LSTM
+        self.downsample = DownSampleForLSTM(input_size, lstm_num_square)
+        # Create lstm grids
+        self.lstms = nn.ModuleList()
+        for _ in range(lstm_num_square):
+            lstm_row = nn.ModuleList()
+            for _ in range(lstm_num_square):
+                lstm_row.append(nn.LSTM(
+                    input_size = self.downsample.version,
+                    hidden_size = 2,
+                    num_layers = layer_num,
+                    dropout=dropout_rate))
+            self.lstms.append(lstm_row)
+        self.social = nn.AdaptiveAvgPool2d()
 
 
         # The LSTM cell

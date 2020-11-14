@@ -72,7 +72,7 @@ class SelectCenter(nn.Module):
     def __init__(self, input_size:int, lstm_num_square:int=3):
         super(SelectCenter, self).__init__()
         # calculate the index to be select
-        grid_len = input_size // lstm_num_square
+        grid_len = input_size // lstm_num_square - 1
         self.grid_select = []
         for x in range(grid_len // 2, input_size, grid_len):
             self.grid_select.append(x)
