@@ -53,6 +53,8 @@ class DownSampleForLSTM(nn.Module):
         # Compute each downsample tensor and concat them in the new axis 4
         for pool in self.pools:
             pool_out = pool(__input)
+            # print(pool)
+            # print(pool_out.shape)
             pool_out = pool_out.reshape(_new_shape + [1])
             output = cat([output, pool_out], axis=-1)
         return output
@@ -72,7 +74,7 @@ class SelectCenter(nn.Module):
     def __init__(self, input_size:int, lstm_num_square:int=3):
         super(SelectCenter, self).__init__()
         # calculate the index to be select
-        grid_len = input_size // lstm_num_square - 1
+        grid_len = input_size // lstm_num_square
         self.grid_select = []
         for x in range(grid_len // 2, input_size, grid_len):
             self.grid_select.append(x)

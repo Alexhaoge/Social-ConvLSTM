@@ -35,7 +35,8 @@ class VanillaLSTM(nn.Module):
         self.lstm_num_square = lstm_num_square
         self.hidden_size = hidden_size
         # Downsample layer before LSTM
-        self.downsample = DownSampleForLSTM(input_size, lstm_num_square, downsample_version)
+        self.downsample = DownSampleForLSTM(
+            input_size, lstm_num_square, downsample_version)
         # Create lstm grids
         self.lstms = nn.ModuleList()
         for _ in range(lstm_num_square):
@@ -47,8 +48,8 @@ class VanillaLSTM(nn.Module):
                     num_layers = layer_num,
                     dropout=dropout_rate))
             self.lstms.append(lstm_row)
-        # embedding layer after downsample
-        self.down_embed = nn.Embedding(downsample_version, embedding_size)
+        # LINEAR embedding layer after downsample
+        self.down_linear_embed = nn.Linear(downsample_version, embedding_size)
         # ReLU and dropout unit
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout_rate)
@@ -67,9 +68,9 @@ class VanillaLSTM(nn.Module):
             for j in range(self.lstm_num_square):
                 # embed the output of downsample
                 _x = self.dropout(self.relu(
-                        self.down_embed(downsample_out[:, :, i, j, :])))
+                    self.down_linear_embed(downsample_out[:, :, i, j, :])))
                 # throw the embeded _x into lstm
                 _tmp = self.lstms[i][j](_x)[0]
                 # get temperature by linear layer
-                output[:, :, i, j] = self.out_linear(_tmp.squeeze())
+                output[:, :, i, j] = self.out_linear(_tmp).squeeze()
         return output
