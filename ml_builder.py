@@ -9,6 +9,7 @@ import os
 from model.convlstm import STConvLSTM
 from model.stconvs2s import STConvS2S
 from model.vlstm import VanillaLSTM
+from model.social import SocialLSTM
 from tool.train_evaluate import Trainer, Evaluator
 from tool.dataset import NetCDFDataset
 from tool.loss import RMSELoss, RMSEDownSample, L1LossDownSample
@@ -24,7 +25,7 @@ class MLBuilder:
 
     def __init__(self, model_descr, version, plot, no_seed, verbose, 
                small_dataset, no_stop, epoch, patience, device, 
-               workers, convlstm, vlstm, mae, chirps, step):
+               workers, convlstm, slstm, vlstm, mae, chirps, step):
         
         self.model_descr = model_descr
         self.version = version
@@ -39,6 +40,7 @@ class MLBuilder:
         self.dataset_type = 'small-dataset' if (self.small_dataset) else 'full-dataset'
         self.workers = workers
         self.convlstm = convlstm
+        self.slstm = slstm
         self.vlstm = vlstm
         self.mae = mae
         self.chirps = chirps
@@ -88,7 +90,9 @@ class MLBuilder:
 
         # Creating the model
         model, criterion  = None, None
-        if self.convlstm:
+        if self.slstm:
+            model = SocialLSTM(input_size=train_dataset.X.shape[3])
+        elif self.convlstm:
             model = STConvLSTM(input_size=train_dataset.X.shape[3], dropout_rate=dropout_rate, upsample=upsample)
         elif self.vlstm:
             model = VanillaLSTM(input_size=train_dataset.X.shape[3])
@@ -97,7 +101,7 @@ class MLBuilder:
                               
         model.to(self.device)
         
-        if self.vlstm:
+        if self.vlstm or self.slstm:
             if self.mae:
                 criterion = L1LossDownSample(input_size=train_dataset.X.shape[3])
             else:

@@ -26,7 +26,8 @@ def get_arguments():
     parser.add_argument('--no-stop', action='store_true', dest='no_stop')
     parser.add_argument('--small-dataset', action='store_true', dest='small_dataset')
     parser.add_argument('--convlstm', action='store_true')
-    parser.add_argument('--vlstm', action='store_true')
+    parser.add_argument('--vlstm', action='store_true', help='Use vanilla lstm model')
+    parser.add_argument('--slstm', action='store_true', help='Use social lstm model')
     parser.add_argument('--mae', action='store_true')
     parser.add_argument('--chirps', action='store_true')
     
@@ -73,7 +74,9 @@ if __name__ == '__main__':
     else:
         device = torch.device('cpu')
     message, model_descr = None, None
-    if (args.convlstm): 
+    if args.slstm:
+        model_descr = 'SocialLSTM'
+    elif args.convlstm: 
         model_descr = 'ConvLSTM'
     elif args.vlstm:
         model_descr = 'vanillaLSTM'
@@ -83,7 +86,7 @@ if __name__ == '__main__':
     model_builder = MLBuilder(model_descr, args.version, args.plot, 
                                args.no_seed, args.verbose, args.small_dataset, 
                                args.no_stop, args.epoch, args.patience, device, 
-                               args.workers, args.convlstm, args.vlstm, args.mae, 
+                               args.workers, args.convlstm, args.slstm, args.vlstm, args.mae, 
                                args.chirps, args.step)
                                
     print(f'RUN MODEL: {model_descr}')

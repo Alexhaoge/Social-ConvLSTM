@@ -14,141 +14,110 @@ class SocialLSTM(nn.Module):
         NOTE: currently all version will only take channel 0 only!
             
     Returns:
-        output of LSTMs
+        output of cells
         (seq_len, batch, lstm_num_square, lstm_num_square)
     """
 
     def __init__(self, input_size:int,
                 lstm_num_square:int=3,
-                layer_num:int=1,
-                dropout_rate:float=0.,
+                embedding_size:int=16,
+                hidden_size:int=32,
+                # layer_num:int=1,
+                dropout_rate:float=0.5,
+                downsample_version:int=3,
                 upsample:bool=False):
         super(SocialLSTM, self).__init__()
         self.input_size = input_size
         self.lstm_num_square = lstm_num_square
+        self.hidden_size = hidden_size
         # Downsample layer before LSTM
         self.downsample = DownSampleForLSTM(input_size, lstm_num_square)
         # Create lstm grids
-        self.lstms = nn.ModuleList()
+        self.cells = nn.ModuleList()
+        self.linear_io = nn.ModuleList()
+        self.linear_ho = nn.ModuleList()
         for _ in range(lstm_num_square):
             lstm_row = nn.ModuleList()
+            io_row = nn.ModuleList()
+            ho_row = nn.ModuleList()
             for _ in range(lstm_num_square):
                 lstm_row.append(nn.LSTMCell(
-                    input_size = self.downsample.version,
-                    hidden_size = 2
+                    input_size = embedding_size * 2,
+                    hidden_size = hidden_size
                 ))
-            self.lstms.append(lstm_row)
-
-        # Linear layer to embed the input position
-        self.input_embed = nn.Linear(self.input_size, self.embedding_size)
-        # Linear layer to embed the social tensor
-        self.tensor_embedding_layer = nn.Linear(self.grid_size*self.grid_size*self.rnn_size, self.embedding_size)
-
-        # Linear layer to map the hidden state of LSTM to output
-        self.output_layer = nn.Linear(self.rnn_size, self.output_size)
-
-        # ReLU and dropout unit
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(args.dropout)
-
-    def getSocialTensor(self, grid, hidden_states):
-        # Construct the variable
-        social_tensor = Variable(torch.zeros(numNodes, self.grid_size*self.grid_size, self.rnn_size))
-        if torch.cuda.is_available():
-            social_tensor = social_tensor.cuda()
+                io_row.append(nn.Linear(embedding_size*2, hidden_size))
+                ho_row.append(nn.Linear(hidden_size, hidden_size))
+            self.cells.append(lstm_row)
+            self.linear_io.append(io_row)
+            self.linear_ho.append(ho_row)
         
-        # For each ped
-        for node in range(numNodes):
-            # Compute the social tensor
-            social_tensor[node] = torch.mm(torch.t(grid[node]), hidden_states)
+        # LINEAR embedding layer after downsample
+        self.down_linear_embed = nn.Linear(downsample_version, embedding_size)
+        # LINEAR embedding layer for social tensor
+        self.social_linear_embed = nn.Linear((lstm_num_square**2)*hidden_size, embedding_size)
+        # activation and dropout unit
+        self.relu = nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
+        self.dropout = nn.Dropout(dropout_rate)
+        # output FC layer
+        self.out_linear = nn.Linear(hidden_size, 1)
 
-        # Reshape the social tensor
-        social_tensor = social_tensor.view(numNodes, self.grid_size*self.grid_size*self.rnn_size)
-        return social_tensor
-            
-    #def forward(self, input_data, grids, hidden_states, cell_states ,PedsList, num_pedlist,dataloader, look_up):
-    def forward(self, *args):
-
+           
+    def forward(self, _input:torch.Tensor,
+                hidden_states:torch.Tensor=None,
+                cell_states:torch.Tensor=None):
         '''
         Forward pass for the model
-        params:
-        input_data: Input positions
-        grids: Grid masks
-        hidden_states: Hidden states of the peds
-        cell_states: Cell states of the peds
-        PedsList: id of peds in each frame for this sequence
-
-        returns:
-        outputs_return: Outputs corresponding to bivariate Gaussian distributions
-        hidden_states
-        cell_states
         '''
-        # List of tensors each of shape args.maxNumPedsx3 corresponding to each frame in the sequence
-            # frame_data = tf.split(0, args.seq_length, self.input_data, name="frame_data")
-        #frame_data = [torch.squeeze(input_, [0]) for input_ in torch.split(0, self.seq_length, input_data)]
+        down_embedded = self.dropout(self.relu(
+            self.down_linear_embed(self.downsample(_input))))
+        _shape = list(down_embedded.shape)
+        _shape[2] = _shape[3] = self.lstm_num_square
+        _shape[4] = self.hidden_size
+        __shape = _shape[1:]
         
-        #print("***************************")
-        #print("input data")
-        # Construct the output variable
-        input_data = args[0]
-        grids = args[1]
-        hidden_states = args[2]
-        cell_states = args[3]
+        outputs = torch.empty(_shape)
+        
+        if hidden_states == None:
+            hidden_states = torch.zeros(__shape)
+        if cell_states == None:
+            cell_states = torch.zeros(__shape)
 
-        if self.gru:
-            cell_states = None
-
-        PedsList = args[4]
-        num_pedlist = args[5]
-        dataloader = args[6]
-        look_up = args[7]
-
-        numNodes = len(look_up)
-        outputs = Variable(torch.zeros(self.seq_length * numNodes, self.output_size))
-        if self.use_cuda:            
+        if torch.cuda.is_available():
             outputs = outputs.cuda()
+            hidden_states = hidden_states.cuda()
+            cell_states = cell_states.cuda()
 
         # For each frame in the sequence
-        for framenum,frame in enumerate(input_data):
-            #nodeIDs_boundary = num_pedlist[framenum]
-            nodeIDs = [int(nodeID) for nodeID in PedsList[framenum]]
-            # List of nodes
-            #print("lookup table :%s"% look_up)
-            list_of_nodes = [look_up[x] for x in nodeIDs]
-            corr_index = Variable((torch.LongTensor(list_of_nodes)))
-            if self.use_cuda:            
-                corr_index = corr_index.cuda()
-            #print(list_of_nodes.data)
-            # Select the corresponding input positions
-            nodes_current = frame[list_of_nodes,:]
-            # Get the corresponding grid masks
-            grid_current = grids[framenum]
-            # Get the corresponding hidden and cell states
-            hidden_states_current = torch.index_select(hidden_states, 0, corr_index)
+        for _t, frame in enumerate(down_embedded):            
             # Compute the social tensor
-            social_tensor = self.getSocialTensor(grid_current, hidden_states_current)
-            # Embed inputs
-            input_embedded = self.dropout(self.relu(self.input_embedding_layer(nodes_current)))
+            social_tensor = hidden_states.view(-1, self.lstm_num_square*self.lstm_num_square*self.hidden_size)
             # Embed the social tensor
-            tensor_embedded = self.dropout(self.relu(self.tensor_embedding_layer(social_tensor)))
-            # Concat input
-            concat_embedded = torch.cat((input_embedded, tensor_embedded), 1)
+            social_embeded = self.dropout(self.relu(self.social_linear_embed(social_tensor)))
             
-            h_nodes, c_nodes = self.cell(concat_embedded, (hidden_states_current, cell_states_current))
-            # Compute the output
-            outputs[framenum*numNodes + corr_index.data] = self.output_layer(h_nodes)
+            _hiddens = torch.empty(__shape)
+            _cells = torch.empty(__shape)
+            if torch.cuda.is_available():
+                _hiddens = _hiddens.cuda()
+                _cells = _cells.cuda()
+            
+            # Throw all those tensors into lstm cell
+            for i in range(self.lstm_num_square):
+                for j in range(self.lstm_num_square):
+                    # concat embedded downsample and social tensor
+                    concat_embedded = torch.cat((frame[:, i, j, :], social_embeded), 1)
+                    # get lstm cell output
+                    _hidden, _cell = self.cells[i][j](
+                        concat_embedded,
+                        (hidden_states[:, i, j, :], cell_states[:, i, j, :])
+                    )
+                    outputs[_t, :, i, j, :] = self.sigmoid(
+                        self.linear_ho[i][j](_hidden) +\
+                        self.linear_io[i][j](concat_embedded)
+                    )
+                    _hiddens[:, i, j, :] = _hidden
+                    _cells[:, i, j, :] = _cell
+            hidden_states = _hiddens
+            cell_states = _cells
 
-            # Update hidden and cell states
-            hidden_states[corr_index.data] = h_nodes
-            if not self.gru:
-                cell_states[corr_index.data] = c_nodes
-
-        # Reshape outputs
-        outputs_return = Variable(torch.zeros(self.seq_length, numNodes, self.output_size))
-        if self.use_cuda:
-            outputs_return = outputs_return.cuda()
-        for framenum in range(self.seq_length):
-            for node in range(numNodes):
-                outputs_return[framenum, node, :] = outputs[framenum*numNodes + node, :]
-
-        return outputs_return, hidden_states, cell_states
+        return self.out_linear(outputs).squeeze()
