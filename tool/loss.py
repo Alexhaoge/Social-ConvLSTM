@@ -30,4 +30,4 @@ class L1LossDownSample(nn.Module):
         self.down = SelectCenter(input_size, lstm_num_square)
     
     def forward(self, yhat, y):
-        return self.l1loss(yhat, self.down(torch.squeeze(y)))
+        return self.l1loss(yhat, self.down(torch.squeeze(y).permute(1,0,2,3)))

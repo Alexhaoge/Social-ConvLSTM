@@ -34,21 +34,21 @@ class SocialLSTM(nn.Module):
         self.downsample = DownSampleForLSTM(input_size, lstm_num_square)
         # Create lstm grids
         self.cells = nn.ModuleList()
-        self.linear_io = nn.ModuleList()
+        # self.linear_io = nn.ModuleList()
         self.linear_ho = nn.ModuleList()
         for _ in range(lstm_num_square):
             lstm_row = nn.ModuleList()
-            io_row = nn.ModuleList()
+            # io_row = nn.ModuleList()
             ho_row = nn.ModuleList()
             for _ in range(lstm_num_square):
                 lstm_row.append(nn.LSTMCell(
                     input_size = embedding_size * 2,
                     hidden_size = hidden_size
                 ))
-                io_row.append(nn.Linear(embedding_size*2, hidden_size))
+                # io_row.append(nn.Linear(embedding_size*2, hidden_size))
                 ho_row.append(nn.Linear(hidden_size, hidden_size))
             self.cells.append(lstm_row)
-            self.linear_io.append(io_row)
+            # self.linear_io.append(io_row)
             self.linear_ho.append(ho_row)
         
         # LINEAR embedding layer after downsample
@@ -112,8 +112,8 @@ class SocialLSTM(nn.Module):
                         (hidden_states[:, i, j, :], cell_states[:, i, j, :])
                     )
                     outputs[_t, :, i, j, :] = self.sigmoid(
-                        self.linear_ho[i][j](_hidden) +\
-                        self.linear_io[i][j](concat_embedded)
+                        self.linear_ho[i][j](_hidden)
+                        # self.linear_io[i][j](concat_embedded)
                     )
                     _hiddens[:, i, j, :] = _hidden
                     _cells[:, i, j, :] = _cell
