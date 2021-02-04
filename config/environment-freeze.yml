@@ -154,6 +154,5 @@ dependencies:
     - tb-nightly==1.14.0a20190319
     - tensorflow-estimator-2-0-preview==1.14.0.dev2019040500
     - termcolor==1.1.0
-    - tf-nightly-gpu-2-0-preview==2.0.0.dev20190407
     - werkzeug==0.15.2
 
