@@ -40,14 +40,10 @@ class Trainer:
 
         return train_losses, val_losses
 
-<<<<<<< HEAD
-    def __train(self):
+    def __train(self, is_chirps=False):
         """
         inputs/target shape (batch, 1, seq_len, H, W)
         """
-=======
-    def __train(self, is_chirps=False):
->>>>>>> upstream/master
         self.model.train()
         epoch_loss = 0.0
         mask_land = self.util.get_mask_land().to(self.device)
