@@ -4,7 +4,7 @@ from torch.nn.modules.activation import ReLU
 from .downsample import DownSampleForLSTM
 import torch
 
-class VanillaLSTM(nn.Module):
+class VanillaLSTM_Downsample(nn.Module):
     """Vanilla LSTMs
 
     Simple vanilla LSTMs for baseline. After downsample, 
@@ -19,29 +19,29 @@ class VanillaLSTM(nn.Module):
         
     Returns:
         output of LSTMs
-        (seq_len, batch, lstm_num_square, lstm_num_square)
+        (seq_len, batch, lstms_shape[0], lstms_shape[1])
     """
-    def __init__(self,
-                input_size:int,
-                lstm_num_square:int=3,
-                embedding_size:int=16,
-                hidden_size:int=32,
-                layer_num:int=1,
-                dropout_rate:float=0.5,
-                downsample_version:int=3,
-                upsample:bool=False):
-        super(VanillaLSTM, self).__init__()
+    def __init__(
+        self, input_size, lstms_shape=3,
+        embedding_size:int=16,
+        hidden_size:int=32,
+        layer_num:int=1,
+        dropout_rate:float=0.5,
+        downsample_version:int=3,
+        *args, **kwargs
+    ):
+        super(VanillaLSTM_Downsample, self).__init__(*args, **kwargs)
         self.input_size = input_size
-        self.lstm_num_square = lstm_num_square
+        self.lstms_shape = (lstms_shape, lstms_shape) if isinstance(lstms_shape, int) else lstms_shape
         self.hidden_size = hidden_size
         # Downsample layer before LSTM
         self.downsample = DownSampleForLSTM(
-            input_size, lstm_num_square, downsample_version)
+            input_size, self.lstms_shape, downsample_version)
         # Create lstm grids
         self.lstms = nn.ModuleList()
-        for _ in range(lstm_num_square):
+        for _ in range(self.lstms_shape[0]):
             lstm_row = nn.ModuleList()
-            for _ in range(lstm_num_square):
+            for _ in range(self.lstms_shape[1]):
                 lstm_row.append(nn.LSTM(
                     input_size = embedding_size,
                     hidden_size = hidden_size,
@@ -64,8 +64,8 @@ class VanillaLSTM(nn.Module):
         output = torch.empty(output_shape)
         if torch.cuda.is_available():
             output = output.cuda()
-        for i in range(self.lstm_num_square):
-            for j in range(self.lstm_num_square):
+        for i in range(self.lstms_shape[0]):
+            for j in range(self.lstms_shape[1]):
                 # embed the output of downsample
                 _x = self.dropout(self.relu(
                     self.down_linear_embed(downsample_out[:, :, i, j, :])))

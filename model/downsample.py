@@ -8,54 +8,42 @@ class DownSampleForLSTM(nn.Module):
     Downsample module before LSTM.
 
     Args:
-        input_size: length of the input temperature.
-        lstm_num_square: Number of lstms is 
-                        ``lstm_num_square x lstm_num_square``.
+        input_size: input tensor shape (B,C,Seq,H, W).
+        lstms_shape: Number of lstms is 
+                        ``lstms_shape[0] x lstms_shape[0]``.
                         Default 3.
-        version: default 1.
+        version: default 3.
 
     Inputs:
         _input: input tensor should be in shape of
-        (batch, channel, seq_len, input_size, input_size).
-        NOTE: currently all version will only take channel 0 only!
+        (batch, channel, seq_len, H, W).
         
     Ouputs:
         downsample temperature grid in shape of
-        (seq_len, batch, lstm_num_square, lstm_num_square, version)
+        (seq_len, batch, lstms_shape[0], lstms_shape[1], version*channel)
 
     """
-    def __init__(self,
-                input_size:int,
-                lstm_num_square:int=3,
+    def __init__(self, input_size, lstms_shape,
                 version:int=3):
         super(DownSampleForLSTM, self).__init__()
-        self.lstm_num_square = lstm_num_square
-        self.output_channels = version
+        self.lstms_shape = (lstms_shape, lstms_shape) if isinstance(lstms_shape, int) else lstms_shape
+        self.output_channels = version * input_size[1]
         self.version = version
         self.pools = nn.ModuleList()
-        self.pools.append(SelectCenter(input_size, lstm_num_square))
+        self.pools.append(SelectCenter(input_size, self.lstms_shape))
         if version > 1:
-            self.pools.append(nn.AdaptiveAvgPool2d(lstm_num_square))
+            self.pools.append(nn.AdaptiveAvgPool2d(self.lstms_shape))
         if version > 2:
-            self.pools.append(nn.AdaptiveMaxPool2d(lstm_num_square))
+            self.pools.append(nn.AdaptiveMaxPool2d(self.lstms_shape))
 
 
     def forward(self, _input):
-        # Get channel 0 and reshape the input to
-        # (seq_len, batch, input_size, input_size) for downsampling
-        __input = _input[:,0].permute(1,0,2,3)
-        # Create empty output tensor and shape
-        _new_shape = list(__input.shape)
-        _new_shape[2] = _new_shape[3] = self.lstm_num_square
-        output = empty(_new_shape + [0])
-        if torch.cuda.is_available():
-            output = output.cuda()
-        # Compute each downsample tensor and concat them in the new axis 4
+        # Compute each downsample tensor and 
+        # concat them in the new axis 4
         for pool in self.pools:
-            pool_out = pool(__input)
+            pool_out = pool(_input).permute(2,0,3,4,1)
             # print(pool)
             # print(pool_out.shape)
-            pool_out = pool_out.reshape(_new_shape + [1])
             output = cat([output, pool_out], axis=-1)
         return output
 
@@ -66,23 +54,29 @@ class SelectCenter(nn.Module):
     Just roughly select the center grid of each block as downsample
 
     Inputs:
-        (seq_len, batch, input_size, input_size)
+        (..., input_size, input_size)
 
     Outputs:
-        (seq_len, batch, lstm_num_square, lstm_num_square)
+        (..., lstms_shape[0], lstms_shape[1])
     """
-    def __init__(self, input_size:int, lstm_num_square:int=3):
+    def __init__(self, input_size, lstms_shape):
         super(SelectCenter, self).__init__()
         # calculate the index to be select
-        grid_len = input_size // lstm_num_square
-        self.grid_select = []
-        for x in range(grid_len // 2, input_size, grid_len):
-            self.grid_select.append(x)
-        self.grid_select = torch.tensor(self.grid_select)
+        self.lstms_shape = (lstms_shape, lstms_shape) if isinstance(lstms_shape, int) else lstms_shape
+        grid_len_x = input_size[-2] // self.lstms_shape[0]
+        self.grid_select_x = []
+        for x in range(grid_len_x // 2, input_size[0], grid_len_x):
+            self.grid_select_x.append(x)
+        grid_len_y = input_size[-1] // self.lstms_shape[1]
+        self.grid_select_y = []
+        for y in range(grid_len_y // 2, input_size[0], grid_len_y):
+            self.grid_select_y.append(y)
+        self.grid_select_y = torch.tensor(self.grid_select_y)
         if torch.cuda.is_available():
-            self.grid_select = self.grid_select.cuda()
+            self.grid_select_x = self.grid_select_x.cuda()
+            self.grid_select_y = self.grid_select_y.cuda()
             
 
     def forward(self, _input):
-        _output = _input.index_select(-1, self.grid_select)
-        return _output.index_select(-2, self.grid_select)
+        _output = _input.index_select(-2, self.grid_select_x)
+        return _output.index_select(-1, self.grid_select_y)

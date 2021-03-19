@@ -1,14 +1,13 @@
 import numpy as np
 import random as rd
 import xarray as xr
-import pandas as pd
-import matplotlib.pyplot as plt
 import time as tm
-import os
 
-from model.stconvs2s import STConvS2S_R, STConvS2S_C
-from model.baselines import *
-from model.ablation import *
+from model.baselines import (
+    conv2plus1d, conv3d, encoder_decoder3d,
+    mim, predrnn, stconvs2s
+)
+from model import (stconvlstm, social, vlstm)
  
 from tool.train_evaluate import Trainer, Evaluator
 from tool.dataset import NetCDFDataset
@@ -16,9 +15,8 @@ from tool.loss import RMSELoss, RMSEDownSample, L1LossDownSample
 from tool.utils import Util
 
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
-from torch import optim
+from torch.nn import L1Loss
 
 class MLBuilder:
 
@@ -65,24 +63,18 @@ class MLBuilder:
         test_loader = DataLoader(dataset=test_dataset, shuffle=False, **params)
         
         models = {
-            'stconvs2s-r': STConvS2S_R,
-            'stconvs2s-c': STConvS2S_C,
-            'convlstm': STConvLSTM,
-            'predrnn': PredRNN,
-            'mim': MIM,
-            'conv2plus1d': Conv2Plus1D,
-            'conv3d': Conv3D,
-            'enc-dec3d': Endocer_Decoder3D,
-            'ablation-stconvs2s-nocausalconstraint': AblationSTConvS2S_NoCausalConstraint,
-            'ablation-stconvs2s-notemporal': AblationSTConvS2S_NoTemporal,
-            'ablation-stconvs2s-r-nochannelincrease': AblationSTConvS2S_R_NoChannelIncrease,
-            'ablation-stconvs2s-c-nochannelincrease': AblationSTConvS2S_C_NoChannelIncrease,
-            'ablation-stconvs2s-r-inverted': AblationSTConvS2S_R_Inverted,
-            'ablation-stconvs2s-c-inverted': AblationSTConvS2S_C_Inverted,
-            'ablation-stconvs2s-r-notfactorized': AblationSTConvS2S_R_NotFactorized,
-            'ablation-stconvs2s-c-notfactorized': AblationSTConvS2S_C_NotFactorized
+            'stconvs2s-r': stconvs2s.STConvS2S_R,
+            'stconvs2s-c': stconvs2s.STConvS2S_C,
+            'convlstm': stconvlstm.STConvLSTM,
+            'predrnn': predrnn.PredRNN,
+            'mim': mim.MIM,
+            'conv2plus1d': conv2plus1d.Conv2Plus1D,
+            'conv3d': conv3d.Conv3D,
+            'enc-dec3d': encoder_decoder3d.Endocer_Decoder3D,
+            'vlstm': vlstm.VanillaLSTM_Downsample,
+            'slstm': social.SocialLSTM_Downsample,
         }
-        if not(self.config.model in models):
+        if self.config.model not in models:
             raise ValueError(f'{self.config.model} is not a valid model name. Choose between: {models.keys()}')
             quit()
             
@@ -91,7 +83,20 @@ class MLBuilder:
         model = model_bulder(train_dataset.X.shape, self.config.num_layers, self.config.hidden_dim, 
                              self.config.kernel_size, self.device, self.dropout_rate, int(self.step))
         model.to(self.device)
-        criterion = RMSELoss()
+        
+        metrics = {
+            'rmse': (RMSELoss, RMSEDownSample),
+            'mae': (L1Loss, L1LossDownSample)
+        }
+        if self.config.loss not in metrics:
+            raise ValueError(f'{self.config.loss} is not a valid loss function name. Choose between: {models.keys()}')
+            quit()
+        if self.config.model in ['vlstm', 'slstm']:
+            loss = metrics[self.config.loss][0]()
+        else:
+            loss = metrics[self.config.loss][0](train_dataset.X.shape)
+        loss.to(self.device)
+
         opt_params = {'lr': 0.001, 
                       'alpha': 0.9, 
                       'eps': 1e-6}
@@ -100,9 +105,9 @@ class MLBuilder:
         
         train_info = {'train_time': 0}
         if self.config.pre_trained is None:
-            train_info = self.__execute_learning(model, criterion, optimizer, train_loader,  val_loader, util) 
+            train_info = self.__execute_learning(model, loss, optimizer, train_loader,  val_loader, util) 
                                                  
-        eval_info = self.__load_and_evaluate(model, criterion, optimizer, test_loader, 
+        eval_info = self.__load_and_evaluate(model, loss, optimizer, test_loader, 
                                              train_info['train_time'], util)
 
         if (torch.cuda.is_available()):

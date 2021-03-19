@@ -3,44 +3,45 @@ import torch
 
 from .downsample import DownSampleForLSTM
 
-class SocialLSTM(nn.Module):
+class SocialLSTM_Downsample(nn.Module):
     """Social LSTM
-
+    Predict discrete point with downsample
     Args:
 
     Inputs:
         _input: input tensor should be in shape of
-        (batch, channel, seq_len,  input_size, input_size).
+        (batch, channel, seq_len, H, W).
         NOTE: currently all version will only take channel 0 only!
             
     Returns:
         output of cells
-        (seq_len, batch, lstm_num_square, lstm_num_square)
+        (seq_len, batch, lstms_shape[0], lstms_shape[1])
     """
 
-    def __init__(self, input_size:int,
-                lstm_num_square:int=3,
-                embedding_size:int=16,
-                hidden_size:int=32,
-                # layer_num:int=1,
-                dropout_rate:float=0.5,
-                downsample_version:int=3,
-                upsample:bool=False):
-        super(SocialLSTM, self).__init__()
+    def __init__(
+        self, input_size, lstms_shape=3,
+        embedding_size:int=16,
+        hidden_size:int=32,
+        # layer_num:int=1,
+        dropout_rate:float=0.5,
+        downsample_version:int=3,
+        *args, **kwargs
+    ):
+        super(SocialLSTM_Downsample, self).__init__(*args, **kwargs)
         self.input_size = input_size
-        self.lstm_num_square = lstm_num_square
+        self.lstms_shape = (lstms_shape, lstms_shape) if isinstance(lstms_shape, int) else lstms_shape
         self.hidden_size = hidden_size
         # Downsample layer before LSTM
-        self.downsample = DownSampleForLSTM(input_size, lstm_num_square)
+        self.downsample = DownSampleForLSTM(input_size, lstms_shape)
         # Create lstm grids
         self.cells = nn.ModuleList()
         # self.linear_io = nn.ModuleList()
         self.linear_ho = nn.ModuleList()
-        for _ in range(lstm_num_square):
+        for _ in range(lstms_shape[0]):
             lstm_row = nn.ModuleList()
             # io_row = nn.ModuleList()
             ho_row = nn.ModuleList()
-            for _ in range(lstm_num_square):
+            for _ in range(lstms_shape[1]):
                 lstm_row.append(nn.LSTMCell(
                     input_size = embedding_size * 2,
                     hidden_size = hidden_size
@@ -54,7 +55,7 @@ class SocialLSTM(nn.Module):
         # LINEAR embedding layer after downsample
         self.down_linear_embed = nn.Linear(downsample_version, embedding_size)
         # LINEAR embedding layer for social tensor
-        self.social_linear_embed = nn.Linear((lstm_num_square**2)*hidden_size, embedding_size)
+        self.social_linear_embed = nn.Linear(lstms_shape[0]*lstms_shape[1]*hidden_size, embedding_size)
         # activation and dropout unit
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
@@ -72,7 +73,8 @@ class SocialLSTM(nn.Module):
         down_embedded = self.dropout(self.relu(
             self.down_linear_embed(self.downsample(_input))))
         _shape = list(down_embedded.shape)
-        _shape[2] = _shape[3] = self.lstm_num_square
+        _shape[2] = self.lstms_shape[0]
+        _shape[3] = self.lstms_shape[1]
         _shape[4] = self.hidden_size
         __shape = _shape[1:]
         
@@ -91,7 +93,7 @@ class SocialLSTM(nn.Module):
         # For each frame in the sequence
         for _t, frame in enumerate(down_embedded):            
             # Compute the social tensor
-            social_tensor = hidden_states.view(-1, self.lstm_num_square*self.lstm_num_square*self.hidden_size)
+            social_tensor = hidden_states.view(-1, self.lstms_shape[0]*self.lstms_shape[1]*self.hidden_size)
             # Embed the social tensor
             social_embeded = self.dropout(self.relu(self.social_linear_embed(social_tensor)))
             
@@ -102,8 +104,8 @@ class SocialLSTM(nn.Module):
                 _cells = _cells.cuda()
             
             # Throw all those tensors into lstm cell
-            for i in range(self.lstm_num_square):
-                for j in range(self.lstm_num_square):
+            for i in range(self.lstms_shape[0]):
+                for j in range(self.lstms_shape[1]):
                     # concat embedded downsample and social tensor
                     concat_embedded = torch.cat((frame[:, i, j, :], social_embeded), 1)
                     # get lstm cell output

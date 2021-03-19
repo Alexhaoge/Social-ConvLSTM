@@ -6,7 +6,11 @@ from torch.utils.data import Dataset
 
 class NetCDFDataset(Dataset):
 
-    def __init__(self, dataset, test_split=0, validation_split=0, is_validation=False, is_test=False, is_2d_model=False):
+    def __init__(
+        self, dataset, 
+        test_split=0, validation_split=0, 
+        is_validation=False, is_test=False, 
+        is_2d_model=False):
         super(NetCDFDataset, self).__init__()
         
         self.is_2d_model = is_2d_model
