@@ -30,7 +30,7 @@ class SocialConvLSTM(nn.Module):
             hidden_dim=hidden_dim,
             kernel_size=(kernel_size, kernel_size) if isinstance(kernel_size, int) else kernel_size,
             dropout_rate=dropout_rate,
-            embed_dim=embed_dim,
+            embed_dim=hidden_dim,
             lstms_shape=self.lstms_shape,
             share=share
         )
