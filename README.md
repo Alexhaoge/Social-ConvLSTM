@@ -1,10 +1,10 @@
-# STConvS2S: Spatiotemporal Convolutional Sequence to Sequence Network for weather forecasting
+# Social-ConvLSTM
 
-> *UPDATE: new code released with changes in our architecture. Please see the [release notes](https://github.com/MLRG-CEFET-RJ/stconvs2s/releases) for details (Nov/2020)*
+> *NOTE: This is an active repo with frequent change.
 
 This repository has the open source implementation of a new architecture termed STConvS2S. To sum up, our approach (STConvS2S) uses only 3D convolutional neural network (CNN) to tackle the sequence-to-sequence task using spatiotemporal data. We compare our results with state-of-the-art architectures. Details in the [article published in Neurocomputing, Elsevier](https://doi.org/10.1016/j.neucom.2020.09.060) ([arXiv](https://arxiv.org/abs/1912.00134) versions).
 
-![STConvS2S architecture](/image/stconvs2s.png)
+![STConvS2S architecture](/image/sociallstm.png)
 
 ## Requirements
 
