@@ -1,7 +1,5 @@
-from torch import tensor
 import torch.nn as nn
-from torch.nn.modules.activation import ReLU
-from .downsample import DownSampleForLSTM
+from model.downsample import DownSampleForLSTM
 import torch
 
 class VanillaLSTM_Downsample(nn.Module):
@@ -23,14 +21,15 @@ class VanillaLSTM_Downsample(nn.Module):
     """
     def __init__(
         self, input_size, lstms_shape=3,
-        embedding_size:int=16,
-        hidden_size:int=32,
-        layer_num:int=1,
-        dropout_rate:float=0.5,
-        downsample_version:int=3,
+        embedding_size: int = 32,
+        hidden_size: int = 32,
+        layer_num: int = 1,
+        dropout_rate: float = 0.5,
+        downsample_version: int = 3,
+        step: int = 5,
         *args, **kwargs
     ):
-        super(VanillaLSTM_Downsample, self).__init__(*args, **kwargs)
+        super(VanillaLSTM_Downsample, self).__init__()
         self.input_size = input_size
         self.lstms_shape = (lstms_shape, lstms_shape) if isinstance(lstms_shape, int) else lstms_shape
         self.hidden_size = hidden_size
@@ -53,6 +52,8 @@ class VanillaLSTM_Downsample(nn.Module):
         # ReLU and dropout unit
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout_rate)
+        # time fusion
+        self.conv3d = nn.Conv3d(input_size[2], step, 1)
         # output FC layer
         self.out_linear = nn.Linear(hidden_size, 1)
         
@@ -60,7 +61,7 @@ class VanillaLSTM_Downsample(nn.Module):
     def forward(self, _input):
         downsample_out = self.downsample(_input)
         output_shape = list(downsample_out.shape)
-        output_shape.pop()
+        output_shape[-1] = self.hidden_size
         output = torch.empty(output_shape)
         if torch.cuda.is_available():
             output = output.cuda()
@@ -70,7 +71,10 @@ class VanillaLSTM_Downsample(nn.Module):
                 _x = self.dropout(self.relu(
                     self.down_linear_embed(downsample_out[:, :, i, j, :])))
                 # throw the embeded _x into lstm
-                _tmp = self.lstms[i][j](_x)[0]
-                # get temperature by linear layer
-                output[:, :, i, j] = self.out_linear(_tmp).squeeze()
-        return output
+                output[:, :, i, j, :] = self.lstms[i][j](_x)[0]
+        output_fusion = self.dropout(self.relu(
+            self.conv3d(output.permute(1,0,2,3,4))
+        )).permute(1,0,2,3,4)
+        return self.out_linear(output_fusion).squeeze()
+
+

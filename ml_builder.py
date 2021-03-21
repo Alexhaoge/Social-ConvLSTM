@@ -5,9 +5,10 @@ import time as tm
 
 from model.baselines import (
     conv2plus1d, conv3d, encoder_decoder3d,
-    mim, predrnn, stconvs2s
+    mim, predrnn, stconvlstm, stconvs2s
 )
-from model import (stconvlstm, social, vlstm)
+from model.ablation import nosocial
+from model import slstm, sclstm
  
 from tool.train_evaluate import Trainer, Evaluator
 from tool.dataset import NetCDFDataset
@@ -45,7 +46,7 @@ class MLBuilder:
                                       validation_split=validation_split, is_validation=True)
         test_dataset  = NetCDFDataset(ds, test_split=test_split, 
                                       validation_split=validation_split, is_test=True)
-        if (self.config.verbose):
+        if self.config.verbose:
             print('[X_train] Shape:', train_dataset.X.shape)
             print('[y_train] Shape:', train_dataset.y.shape)
             print('[X_val] Shape:', val_dataset.X.shape)
@@ -71,8 +72,9 @@ class MLBuilder:
             'conv2plus1d': conv2plus1d.Conv2Plus1D,
             'conv3d': conv3d.Conv3D,
             'enc-dec3d': encoder_decoder3d.Endocer_Decoder3D,
-            'vlstm': vlstm.VanillaLSTM_Downsample,
-            'slstm': social.SocialLSTM_Downsample,
+            'vlstm': nosocial.VanillaLSTM_Downsample,
+            'slstm': slstm.SocialLSTM_Downsample,
+            'sclstm': sclstm.SocialConvLSTM,
         }
         if self.config.model not in models:
             raise ValueError(f'{self.config.model} is not a valid model name. Choose between: {models.keys()}')
@@ -80,10 +82,16 @@ class MLBuilder:
             
         # Creating the model    
         model_bulder = models[self.config.model]
-        model = model_bulder(train_dataset.X.shape, self.config.num_layers, self.config.hidden_dim, 
-                             self.config.kernel_size, self.device, self.dropout_rate, int(self.step))
+        model = model_bulder(
+            input_size=train_dataset.X.shape, 
+            num_layers=self.config.num_layers, 
+            hidden_dim=self.config.hidden_dim, 
+            kernel_size=self.config.kernel_size, 
+            device=self.device, 
+            dropout_rate=self.dropout_rate, 
+            step=int(self.step)
+        )
         model.to(self.device)
-        
         metrics = {
             'rmse': (RMSELoss, RMSEDownSample),
             'mae': (L1Loss, L1LossDownSample)
@@ -92,23 +100,26 @@ class MLBuilder:
             raise ValueError(f'{self.config.loss} is not a valid loss function name. Choose between: {models.keys()}')
             quit()
         if self.config.model in ['vlstm', 'slstm']:
-            loss = metrics[self.config.loss][0]()
+            loss = metrics[self.config.loss][1](train_dataset.X.shape)
         else:
-            loss = metrics[self.config.loss][0](train_dataset.X.shape)
+            loss = metrics[self.config.loss][0]()
         loss.to(self.device)
 
         opt_params = {'lr': 0.001, 
                       'alpha': 0.9, 
                       'eps': 1e-6}
         optimizer = torch.optim.RMSprop(model.parameters(), **opt_params)
-        util = Util(self.config.model, self.dataset_type, self.config.version, self.filename_prefix)
-        
+        util = Util(
+            self.config.model, self.dataset_type, 
+            self.config.version, self.filename_prefix)
         train_info = {'train_time': 0}
         if self.config.pre_trained is None:
-            train_info = self.__execute_learning(model, loss, optimizer, train_loader,  val_loader, util) 
+            train_info = self.__execute_learning(
+                model, loss, optimizer, train_loader,  val_loader, util) 
                                                  
-        eval_info = self.__load_and_evaluate(model, loss, optimizer, test_loader, 
-                                             train_info['train_time'], util)
+        eval_info = self.__load_and_evaluate(
+            model, loss, optimizer, test_loader, 
+            train_info['train_time'], util)
 
         if (torch.cuda.is_available()):
             torch.cuda.empty_cache()
@@ -116,10 +127,14 @@ class MLBuilder:
         return {**train_info, **eval_info}
 
 
-    def __execute_learning(self, model, criterion, optimizer, train_loader, val_loader, util):
+    def __execute_learning(self, model, loss, optimizer, train_loader, val_loader, util):
         checkpoint_filename = util.get_checkpoint_filename()    
-        trainer = Trainer(model, criterion, optimizer, train_loader, val_loader, self.config.epoch, 
-                          self.device, util, self.config.verbose, self.config.patience, self.config.no_stop)
+        trainer = Trainer(
+            model, loss, optimizer, 
+            train_loader, val_loader, self.config.epoch, 
+            self.device, util, self.config.verbose, 
+            self.config.patience, self.config.no_stop,
+            self.config.model)
     
         start_timestamp = tm.time()
         # Training the model
@@ -139,8 +154,8 @@ class MLBuilder:
                 }
                 
     
-    def __load_and_evaluate(self, model, criterion, optimizer, test_loader, train_time, util):  
-        evaluator = Evaluator(model, criterion, optimizer, test_loader, self.device, util, self.step)
+    def __load_and_evaluate(self, model, loss, optimizer, test_loader, train_time, util):  
+        evaluator = Evaluator(model, loss, optimizer, test_loader, self.device, self.config.model, util, self.step)
         if self.config.pre_trained is not None:
             # Load pre-trained model
             best_epoch, val_loss = evaluator.load_checkpoint(self.config.pre_trained, self.dataset_type, self.config.model)

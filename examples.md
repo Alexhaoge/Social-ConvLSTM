@@ -8,7 +8,7 @@
 'num_layers': 3, 'kernel_size': 5, 'hidden_dim': 32
 
 `python main.py -i 3 -c 0 -v 4 -l 3 -d 32 -k 5 -m stconvs2s-r --plot --email > output/full-dataset/results/stconvs2s-r/cfsr-stconvs2s-r-step5-v4.out`
-
+python main.py -i 1 -c 2 -v 4 -l 3 -d 32 -k 5 --small-dataset -m stconvs2s-r > output/small-dataset/results/cfsr-test-step5.out
 ------- Dataset: CHIRPS ----------- 
 
 ------- Step: 15 ------------------ 

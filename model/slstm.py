@@ -11,7 +11,6 @@ class SocialLSTM_Downsample(nn.Module):
     Inputs:
         _input: input tensor should be in shape of
         (batch, channel, seq_len, H, W).
-        NOTE: currently all version will only take channel 0 only!
             
     Returns:
         output of cells
@@ -20,14 +19,15 @@ class SocialLSTM_Downsample(nn.Module):
 
     def __init__(
         self, input_size, lstms_shape=3,
-        embedding_size:int=16,
+        embedding_size:int=32,
         hidden_size:int=32,
-        # layer_num:int=1,
         dropout_rate:float=0.5,
         downsample_version:int=3,
+        step: int = 5,
         *args, **kwargs
     ):
-        super(SocialLSTM_Downsample, self).__init__(*args, **kwargs)
+        #print(input_size, lstms_shape, embedding_size, hidden_size, dropout_rate, downsample_version, args, kwargs)
+        super(SocialLSTM_Downsample, self).__init__()
         self.input_size = input_size
         self.lstms_shape = (lstms_shape, lstms_shape) if isinstance(lstms_shape, int) else lstms_shape
         self.hidden_size = hidden_size
@@ -37,29 +37,33 @@ class SocialLSTM_Downsample(nn.Module):
         self.cells = nn.ModuleList()
         # self.linear_io = nn.ModuleList()
         self.linear_ho = nn.ModuleList()
-        for _ in range(lstms_shape[0]):
+        for _ in range(self.lstms_shape[0]):
             lstm_row = nn.ModuleList()
             # io_row = nn.ModuleList()
-            ho_row = nn.ModuleList()
-            for _ in range(lstms_shape[1]):
+            # ho_row = nn.ModuleList()
+            for _ in range(self.lstms_shape[1]):
                 lstm_row.append(nn.LSTMCell(
                     input_size = embedding_size * 2,
                     hidden_size = hidden_size
                 ))
                 # io_row.append(nn.Linear(embedding_size*2, hidden_size))
-                ho_row.append(nn.Linear(hidden_size, hidden_size))
+                # ho_row.append(nn.Linear(hidden_size, hidden_size))
             self.cells.append(lstm_row)
             # self.linear_io.append(io_row)
-            self.linear_ho.append(ho_row)
+            # self.linear_ho.append(ho_row)
         
         # LINEAR embedding layer after downsample
-        self.down_linear_embed = nn.Linear(downsample_version, embedding_size)
+        self.down_linear_embed = nn.Linear(
+            downsample_version*input_size[1], embedding_size)
         # LINEAR embedding layer for social tensor
-        self.social_linear_embed = nn.Linear(lstms_shape[0]*lstms_shape[1]*hidden_size, embedding_size)
+        self.social_linear_embed = nn.Linear(
+            self.lstms_shape[0]*self.lstms_shape[1]*hidden_size, embedding_size)
         # activation and dropout unit
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
         self.dropout = nn.Dropout(dropout_rate)
+        # time fusion
+        self.conv3d = nn.Conv3d(input_size[2], step, 1)
         # output FC layer
         self.out_linear = nn.Linear(hidden_size, 1)
 
@@ -70,8 +74,9 @@ class SocialLSTM_Downsample(nn.Module):
         '''
         Forward pass for the model
         '''
-        down_embedded = self.dropout(self.relu(
-            self.down_linear_embed(self.downsample(_input))))
+        down = self.downsample(_input)
+        down_embedded = self.dropout(
+            self.relu(self.down_linear_embed(down)))
         _shape = list(down_embedded.shape)
         _shape[2] = self.lstms_shape[0]
         _shape[3] = self.lstms_shape[1]
@@ -113,13 +118,14 @@ class SocialLSTM_Downsample(nn.Module):
                         concat_embedded,
                         (hidden_states[:, i, j, :], cell_states[:, i, j, :])
                     )
-                    outputs[_t, :, i, j, :] = self.sigmoid(
-                        self.linear_ho[i][j](_hidden)
-                        # self.linear_io[i][j](concat_embedded)
-                    )
+                    outputs[_t, :, i, j, :] = _hidden
                     _hiddens[:, i, j, :] = _hidden
                     _cells[:, i, j, :] = _cell
             hidden_states = _hiddens
             cell_states = _cells
+        
+        output_fusion = self.dropout(self.relu(
+            self.conv3d(outputs.permute(1,0,2,3,4))
+        )).permute(1,0,2,3,4)
 
-        return self.out_linear(outputs).squeeze()
+        return self.out_linear(output_fusion).squeeze()

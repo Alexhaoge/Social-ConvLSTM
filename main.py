@@ -20,7 +20,7 @@ def get_arguments():
     parser.add_argument('-w', '--workers', type=int, default=4)
     parser.add_argument('-c', '--cuda', default=0)
     parser.add_argument('-s', '--step', default=5)
-    parser.add_argument('-m', '--model', default='slstm')
+    parser.add_argument('-m', '--model', default='sclstm')
     parser.add_argument('-l', '--num-layers', type=int, dest='num_layers', default=3)
     parser.add_argument('-d', '--hidden-dim', type=int, dest='hidden_dim', default=32)
     parser.add_argument('-k', '--kernel-size', type=int, dest='kernel_size', default=5)
