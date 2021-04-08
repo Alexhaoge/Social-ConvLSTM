@@ -6,7 +6,8 @@ import torch.nn as nn
 import torch
 
 class STConvLSTM(nn.Module):
-    def __init__(self, input_size, num_layers, hidden_dim, kernel_size, device, dropout_rate, step=5):
+    def __init__(self, input_size, num_layers, hidden_dim, 
+    kernel_size, device, dropout_rate, step=5, *args, **kwargs):
         super(STConvLSTM, self).__init__()
                 
         input_dim = input_size[1]

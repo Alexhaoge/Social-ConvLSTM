@@ -9,7 +9,8 @@ from tool.utils import Util
 
 
 class Endocer_Decoder3D(nn.Module):
-    def __init__(self, input_size, num_layers, hidden_dim, kernel_size, device, dropout_rate, step=5):
+    def __init__(self, input_size, num_layers, hidden_dim,
+     kernel_size, device, dropout_rate, step=5,*args, **kwargs):
         super(Endocer_Decoder3D, self).__init__()
         
         self.down_block = nn.ModuleList()

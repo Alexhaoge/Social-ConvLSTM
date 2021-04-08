@@ -5,7 +5,8 @@ from tool.utils import Util
 
 
 class Conv2Plus1D(nn.Module):
-    def __init__(self, input_size, num_layers, hidden_dim, kernel_size, device, dropout_rate, step=5):
+    def __init__(self, input_size, num_layers, hidden_dim, 
+    kernel_size, device, dropout_rate, step=5,*args, **kwargs):
         super(Conv2Plus1D, self).__init__()
         self.conv2plus1_layers = nn.ModuleList()        
         initial_in_channels = input_size[1]

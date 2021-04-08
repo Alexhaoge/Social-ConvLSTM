@@ -7,7 +7,8 @@ from .generator_block import TemporalGeneratorBlock
 
 
 class STConvS2S_R(nn.Module):
-    def __init__(self, input_size, num_layers, hidden_dim, kernel_size, device, dropout_rate, step=5):
+    def __init__(self, input_size, num_layers, hidden_dim, 
+    kernel_size, device, dropout_rate, step=5, *args, **kwargs):
         super(STConvS2S_R, self).__init__()
         
         self.stconvs2s_r = Model(TemporalReversedBlock, input_size, num_layers, hidden_dim, 
@@ -19,7 +20,8 @@ class STConvS2S_R(nn.Module):
         
      
 class STConvS2S_C(nn.Module):
-    def __init__(self, input_size, num_layers, hidden_dim, kernel_size, device, dropout_rate, step=5):
+    def __init__(self, input_size, num_layers, hidden_dim, 
+    kernel_size, device, dropout_rate, step=5, *args, **kwargs):
         super(STConvS2S_C, self).__init__()
         
         initial_in_channels = input_size[1]

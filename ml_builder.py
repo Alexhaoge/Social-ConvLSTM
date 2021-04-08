@@ -89,7 +89,9 @@ class MLBuilder:
             kernel_size=self.config.kernel_size, 
             device=self.device, 
             dropout_rate=self.dropout_rate, 
-            step=int(self.step)
+            step=int(self.step),
+            share=self.config.share,
+            lstms_shape=self.config.lstms_shape,
         )
         model.to(self.device)
         metrics = {

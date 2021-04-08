@@ -7,7 +7,9 @@ import torch.nn as nn
 from tool.utils import Util
 
 class MIM(nn.Module):
-    def __init__(self, input_size, num_layers, hidden_dim, kernel_size, device, dropout_rate, step=5):
+    def __init__(self, input_size, num_layers, 
+    hidden_dim, kernel_size, device, dropout_rate,
+    step=5, *args, **kwargs):
         super(MIM, self).__init__()
 
         self.filter_size = kernel_size
@@ -209,10 +211,10 @@ class MIMS(nn.Module):
         if x is not None:
             outx = self.conv_x(x) 
             i_x, g_x, f_x, o_x = torch.split(outx, self.num_hidden, dim=1)
-            i_ += i_x
-            f_ += f_x
-            g_ += g_x
-            o_ += o_x
+            i_ = i_ + i_x
+            f_ = f_ + f_x
+            g_ = g_ + g_x
+            o_ = o_ + o_x
 
         i_ = torch.sigmoid(i_)
         f_ = torch.sigmoid(f_ + self._forget_bias)
